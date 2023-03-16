@@ -66,7 +66,7 @@ plot(sft$fitIndices[,1], sft$fitIndices[,5],
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
 
-picked_power = 5
+picked_power = 8
 temp_cor <- cor       
 cor <- WGCNA::cor         
 netwk <- blockwiseModules(input_mat,
