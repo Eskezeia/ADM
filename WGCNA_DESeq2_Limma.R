@@ -15,12 +15,12 @@ library(ggrepel)
 library(patchwork)
 library(BIGverse)
 
-### Load raw OPAR count matrix
-raw_counts <- read.csv("combined_count_matrix_1_modified.csv", header=T, row.names=1)
-head(raw_counts)
-design<-read.csv("DesignMatrix.csv", row.names = 1)
+### Load Raw count RNA-seq matrix
+Rawcount<- read.csv("GSE152004_RNA-seqData.csv", header=T, row.names=1)
+head(Rawcount)
+design<-read.csv("DesignMatrix_GSE152004.csv", row.names = 1)
 #Normalize Counts with DESeq using variance stabilizingg transfomation
-dds <- DESeqDataSetFromMatrix(dat ,dt , design = ~Type)
+dds <- DESeqDataSetFromMatrix(Rawcount, dt , design = ~Type)
 dim(dds) 
 dds <- DESeq(dds)
 a <- varianceStabilizingTransformation(dds)
@@ -31,10 +31,13 @@ q00_wpn <- quantile( rowVars(b))
 expr_normalized_Data <- b[ b1 > q00_wpn, ]
 xx<-expr_normalized_Data
 dim(xx)
-write.csv(xx, "Normalized_data_matrix.csv")
-dt2$CV<-apply(dt2,1, function(x) sd(x) / mean(x) * 100) # CV of each gene
+write.csv(xx, "GSE152004_Normalized_data_matrix.csv")
+# Load normalized gene expression data of GSE67472 & GSE152004
+ NormalizedGSE67472<-read.csv("GSE67472_normalized_data_matrix.csv", row.names = 1)
+ # NormalizedGSE152004<-read.csv("GSE152004_Normalized_data_matrix.csv", row.names = 1)
+dat2$CV<-apply(NormalizedGSE67472,1, function(x) sd(x) / mean(x) * 100) # CV of each gene
 
-# Select hypervariable genes based CV greater than 4 % 
+# Select hypervariable genes based on CV greater than 4 % 
 dat3<-dat2[dat2$CV > 4,]
 
 #WGCNA analysis 
@@ -113,11 +116,7 @@ module_df <- data.frame(
 
 module_df[1:5,]
 module_df
-write.csv(module_df, "modGSE107361.csv")
-
-
-
-
+write.csv(module_df, "mododule_GSE67472.csv")
 
 # Get Module Eigengenes per cluster
 MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
@@ -150,13 +149,13 @@ dim(MEs)
 MEs$MEgreen
 
 # Read clincial traits of asthma and control subjects
-bac_traits = read.csv("GSE130588_clinicalData2.csv", row.names = 1)
+bac_traits = read.csv("GSE67472_clinicalData.csv", row.names = 1)
 bac_traits[,-1] # for CSV file
 bac_traits
 rownames(bac_traits)
 rownames(MEs)
 dd<-rownames(MEs)
-write.csv(dd, "GSE121212_MEs.csv")
+write.csv(dd, "NormalizedGSE67472_MEs.csv")
 
 # sample names should be consistent in eigen genes and traits !!!!
 bac_traits = bac_traits[match(rownames(MEs), rownames(bac_traits)), ]
@@ -190,51 +189,10 @@ labeledHeatmap(Matrix = moduleTraitCor,
                cex.text = 0.5,
                zlim = c(-1,1),
                main = paste("Module-trait relationships"))
-
-
-
-
-# Gene Significance and Module Membership
-
-# Define variable Lesional containing from input-dat
-Lesional = as.data.frame(bac_traits$Lesional);
-names(Lesional) = "Lesional"
-# names (colors) of the modules
-modNames = substring(names(MEs), 3)
-modNames
-Lesional
-geneModuleMembership = as.data.frame(cor(input_mat, MEs, use = "p"));
-MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples));
-names(geneModuleMembership) = paste("MM", modNames, sep="");
-names(MMPvalue) = paste("p.MM", modNames, sep="");
-geneTraitSignificance = as.data.frame(cor(input_mat, Lesional, use = "p"));
-GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSamples));
-names(geneTraitSignificance) = paste("GS.", names(Lesional), sep="");
-names(GSPvalue) = paste("p.GS.", names(Lesional), sep="");
-
-MEs$MEblue
-module = "blue"
-column = match(module, modNames);
-column
-
-moduleGenes = mergedColors==module;
-moduleGenes
-
-sizeGrWindow(7, 7);
-par(mfrow = c(1,1));
-verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
-                   abs(geneTraitSignificance[moduleGenes, 1]),
-                   xlab = paste("Module Membership in", module, "module"),
-                   ylab = "Gene significance for Asthma Status",
-                   main = paste("Module membership vs. gene significance\n"),
-                   cex.main = 0.9, cex.lab = 1, cex.axis = 1, col = module) 
-
-
-
+# Differential Gene expression Analysis 
 # For count data, we used DESeq2 package for DEGs analysis
-# DEGs analysis
-dat<-read.csv("Count_GEOData_data_matrix.csv", row.names = 1)
-dt<-read.csv("designmatrix.csv", row.names = 1)
+dat<-read.csv("Count_GSE152004_data_matrix.csv", row.names = 1)
+dt<-read.csv("DesignMatrix_GSE152004.csv", row.names = 1)
 #Create a Datasheet from count matrix and labels
 dds <- DESeqDataSetFromMatrix(dat ,dt , design = ~Type)
 dim(dds)
@@ -243,19 +201,17 @@ dds <- DESeq(dds)
 res <- results(dds)
 head(res)
 class(res)
-write.csv(res, "DEGs_GSE157194__all.csv")
+write.csv(res, "DEGs_GSE152004__all.csv")
 
 # Limma package was used for DEG analysis for normalized GEO dataset 
-
-dat<-read.csv("Normalized_data_matrix.csv", row.names = 1)
-
-design.mat<-read.csv("design matrix.csv")
+dat<-read.csv("Normalized_GSE67472_data.csv", row.names = 1)
+design.mat<-read.csv("design matrix_GSE67472.csv")
 design.mat<-design.mat[,-1]
 design.mat
 dim(design.mat)
 contrast.mat<-matrix(c(1,-1), ncol = 1)
 dimnames(contrast.mat)<-list(c('A', 'C'), "Diff")
-sample<-factor(rep(c("A", "C"), c(21,410)))
+sample<-factor(rep(c("A", "C"), c(62,43)))
 design.mat<-model.matrix(~0+sample)
 colnames(design.mat)<-levels(sample)
 design.mat
@@ -269,9 +225,9 @@ deg<-topTable(fit3) # top ranked DEGs
 deg1 <- topTable(fit3, n=Inf, coef=1,adjust.method="BH" )
 DEG1 <- as.data.frame(deg1)
 View(DEG1)
-write.csv(DEG1, "DEGs_based on_limma.csv")
-
-# batch effect adjustment based on Surrogate Variable Analysis (SVA)
+write.csv(DEG1, "DEGs_GSE67472.csv")
+               
+# Validation datasets haveing batch effect were corrected using SVA package 
 datx<-read.csv("data with batch_effect.csv", row.names = 1)
 b<-read.csv("Design_matrix.csv")
 b$batch<-as.factor(b$batch)
